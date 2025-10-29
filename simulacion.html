@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Bombeo 3D - Cisterna Subterránea</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1400px;
+            width: 100%;
+            height: 90vh;
+        }
+        
+        .scene-section {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .scene-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.75);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            z-index: 100;
+            line-height: 1.6;
+        }
+        
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 25px;
+            overflow-y: auto;
+        }
+        
+        .control-section h2 {
+            color: #333;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        .slider-box {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        
+        .slider-label {
+            display: block;
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .value-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .info-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-title {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .info-value {
+            color: #333;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        
+        .view-controls {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .view-btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .view-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            #canvas-container {
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="scene-section">
+            <h2>🚰 Visualización 3D del Sistema de Bombeo</h2>
+            <div id="canvas-container">
+                <div class="instructions">
+                    <strong>🖱️ Controles:</strong><br>
+                    • Clic izquierdo + arrastrar: Rotar<br>
+                    • Scroll: Zoom<br>
+                    • Clic derecho + arrastrar: Mover
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <div class="slider-box">
+                <label class="slider-label">Nivel de Agua (metros):</label>
+                <input type="range" class="slider" id="waterSlider" min="0" max="2" step="0.1" value="2">
+            </div>
+            
+            <div class="value-display" id="waterDisplay">2.0 m</div>
+            
+            <div class="info-panel">
+                <div class="info-row">
+                    <span class="info-title">Volumen de agua:</span>
+                    <span class="info-value" id="volumeValue">12.0 m³</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-title">Peso del agua:</span>
+                    <span class="info-value" id="weightValue">117,600 N</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-title">Trabajo restante:</span>
+                    <span class="info-value" id="workValue">352.8 kJ</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-title">Centro de masa:</span>
+                    <span class="info-value" id="centerValue">1.00 m</span>
+                </div>
+            </div>
+            
+            <div class="view-controls">
+                <button class="view-btn" onclick="changeView('front')">Vista Frontal</button>
+                <button class="view-btn" onclick="changeView('side')">Vista Lateral</button>
+                <button class="view-btn" onclick="changeView('top')">Vista Superior</button>
+                <button class="view-btn" onclick="changeView('iso')">Vista Isométrica</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONSTANTES DEL SISTEMA
+        // ============================================
+        const SISTEMA = {
+            AREA: 6,
+            GAMMA: 9800,
+            H_MAX: 2,
+            CISTERN_WIDTH: 3,
+            CISTERN_HEIGHT: 2,
+            CISTERN_DEPTH: 2
+        };
+
+        // ============================================
+        // VARIABLES GLOBALES
+        // ============================================
+        let scene, camera, renderer;
+        let waterMesh;
+        let cameraControls = {
+            rotating: false,
+            panning: false,
+            lastX: 0,
+            lastY: 0,
+            rotationY: Math.PI / 4,
+            rotationX: Math.PI / 6,
+            targetRotationY: Math.PI / 4,
+            targetRotationX: Math.PI / 6,
+            distance: 10,
+            targetDistance: 10,
+            panX: 0,
+            panY: 0,
+            targetPanX: 0,
+            targetPanY: 0
+        };
+
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+            
+            // Escena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 15, 40);
+            
+            // Cámara
+            camera = new THREE.PerspectiveCamera(
+                50,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            updateCameraPosition();
+            
+            // Renderizador
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+            
+            setupLights();
+            createObjects();
+            setupControls();
+            
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        // ============================================
+        // LUCES
+        // ============================================
+        function setupLights() {
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -10;
+            directionalLight.shadow.camera.right = 10;
+            directionalLight.shadow.camera.top = 10;
+            directionalLight.shadow.camera.bottom = -10;
+            scene.add(directionalLight);
+        }
+
+        // ============================================
+        // OBJETOS DE LA ESCENA
+        // ============================================
+        function createObjects() {
+            // 1. CÉSPED (nivel 0, grosor 0.2m)
+            // Posición Y: 0 (centro del césped en la superficie)
+            const grassGeometry = new THREE.BoxGeometry(5, 0.2, 5);
+            const grassMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x228B22,
+                roughness: 0.8
+            });
+            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+            grass.position.y = 0;
+            grass.receiveShadow = true;
+            grass.castShadow = true;
+            scene.add(grass);
+            
+            // 2. TIERRA (de -0.1 a -1.1m, grosor 1m)
+            // Posición Y: -0.6 (centro de la capa de tierra)
+            const soilGeometry = new THREE.BoxGeometry(5, 1, 5);
+            const soilMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8B7355,
+                roughness: 0.9
+            });
+            const soil = new THREE.Mesh(soilGeometry, soilMaterial);
+            soil.position.y = -0.6;
+            scene.add(soil);
+            
+            // 3. CISTERNA (de -2 a -4m, altura 2m)
+            // Posición Y: -3 (centro de la cisterna)
+            const cisternGeometry = new THREE.BoxGeometry(
+                SISTEMA.CISTERN_WIDTH,
+                SISTEMA.CISTERN_HEIGHT,
+                SISTEMA.CISTERN_DEPTH
+            );
+            const cisternMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x555555,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const cistern = new THREE.Mesh(cisternGeometry, cisternMaterial);
+            cistern.position.y = -3;
+            cistern.renderOrder = 1;
+            scene.add(cistern);
+            
+            // Bordes de la cisterna
+            const edges = new THREE.EdgesGeometry(cisternGeometry);
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x000000, 
+                linewidth: 2 
+            });
+            const wireframe = new THREE.LineSegments(edges, lineMaterial);
+            wireframe.renderOrder = 2;
+            cistern.add(wireframe);
+            
+            // 4. AGUA (dentro de la cisterna)
+            // La posición se ajustará dinámicamente
+            const waterGeometry = new THREE.BoxGeometry(
+                SISTEMA.CISTERN_WIDTH - 0.15,
+                SISTEMA.CISTERN_HEIGHT,
+                SISTEMA.CISTERN_DEPTH - 0.15
+            );
+            const waterMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x1E88E5,
+                transparent: true,
+                opacity: 0.75,
+                roughness: 0.1,
+                metalness: 0.3,
+                depthWrite: true
+            });
+            waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+            waterMesh.renderOrder = 3;
+            scene.add(waterMesh);
+            
+            // 5. MOTOR (sobre el césped)
+            // Cuerpo principal
+            const motorBodyGeometry = new THREE.BoxGeometry(0.8, 0.5, 0.5);
+            const motorBodyMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x37474f,
+                metalness: 0.6,
+                roughness: 0.4
+            });
+            const motorBody = new THREE.Mesh(motorBodyGeometry, motorBodyMaterial);
+            motorBody.position.set(0, 0.35, 0);
+            motorBody.castShadow = true;
+            scene.add(motorBody);
+            
+            // Círculo del motor
+            const motorCircleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 32);
+            const motorCircleMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xFF5722,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+            const motorCircle = new THREE.Mesh(motorCircleGeometry, motorCircleMaterial);
+            motorCircle.rotation.x = Math.PI / 2;
+            motorCircle.position.set(0, 0.35, 0.3);
+            motorCircle.castShadow = true;
+            scene.add(motorCircle);
+            
+            // 6. GRID (cuadrícula de referencia)
+            const gridHelper = new THREE.GridHelper(5, 5, 0x888888, 0xcccccc);
+            gridHelper.position.y = 0.11;
+            scene.add(gridHelper);
+        }
+
+        // ============================================
+        // ACTUALIZACIÓN DEL AGUA
+        // ============================================
+        function updateWaterLevel(height) {
+            if (height === 0) {
+                waterMesh.visible = false;
+                return;
+            }
+            
+            waterMesh.visible = true;
+            
+            // Escalar el agua verticalmente
+            waterMesh.scale.y = height / SISTEMA.H_MAX;
+            
+            // Posicionar correctamente desde el fondo de la cisterna
+            // Fondo de cisterna: -4m
+            // Centro del agua: -4m + (altura del agua / 2)
+            const waterCenterY = -4 + (height / 2);
+            waterMesh.position.y = waterCenterY;
+        }
+
+        // ============================================
+        // CÁLCULOS
+        // ============================================
+        function calculateWork(h) {
+            return SISTEMA.GAMMA * SISTEMA.AREA * (4 * h - (h * h) / 2);
+        }
+
+        function updateDisplay() {
+            const h = parseFloat(document.getElementById('waterSlider').value);
+            
+            updateWaterLevel(h);
+            
+            document.getElementById('waterDisplay').textContent = h.toFixed(1) + ' m';
+            
+            const volume = SISTEMA.AREA * h;
+            document.getElementById('volumeValue').textContent = volume.toFixed(1) + ' m³';
+            
+            const weight = SISTEMA.GAMMA * volume;
+            document.getElementById('weightValue').textContent = weight.toLocaleString('es-PE') + ' N';
+            
+            const work = calculateWork(h);
+            const workKJ = work / 1000;
+            document.getElementById('workValue').textContent = workKJ.toFixed(1) + ' kJ';
+            
+            const centerMass = h / 2;
+            document.getElementById('centerValue').textContent = centerMass.toFixed(2) + ' m';
+        }
+
+        // ============================================
+        // CONTROLES DE CÁMARA
+        // ============================================
+        function setupControls() {
+            const canvas = renderer.domElement;
+            
+            canvas.addEventListener('mousedown', (e) => {
+                if (e.button === 0) cameraControls.rotating = true;
+                if (e.button === 2) cameraControls.panning = true;
+                cameraControls.lastX = e.clientX;
+                cameraControls.lastY = e.clientY;
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                cameraControls.rotating = false;
+                cameraControls.panning = false;
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (cameraControls.rotating) {
+                    const deltaX = e.clientX - cameraControls.lastX;
+                    const deltaY = e.clientY - cameraControls.lastY;
+                    
+                    cameraControls.targetRotationY += deltaX * 0.01;
+                    cameraControls.targetRotationX += deltaY * 0.01;
+                    cameraControls.targetRotationX = Math.max(
+                        -Math.PI / 2 + 0.1, 
+                        Math.min(Math.PI / 2 - 0.1, cameraControls.targetRotationX)
+                    );
+                }
+                
+                if (cameraControls.panning) {
+                    const deltaX = e.clientX - cameraControls.lastX;
+                    const deltaY = e.clientY - cameraControls.lastY;
+                    
+                    cameraControls.targetPanX -= deltaX * 0.01;
+                    cameraControls.targetPanY += deltaY * 0.01;
+                }
+                
+                cameraControls.lastX = e.clientX;
+                cameraControls.lastY = e.clientY;
+            });
+            
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                cameraControls.targetDistance += e.deltaY * 0.01;
+                cameraControls.targetDistance = Math.max(5, Math.min(25, cameraControls.targetDistance));
+            });
+            
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        }
+
+        function updateCameraPosition() {
+            cameraControls.rotationY += (cameraControls.targetRotationY - cameraControls.rotationY) * 0.1;
+            cameraControls.rotationX += (cameraControls.targetRotationX - cameraControls.rotationX) * 0.1;
+            cameraControls.distance += (cameraControls.targetDistance - cameraControls.distance) * 0.1;
+            cameraControls.panX += (cameraControls.targetPanX - cameraControls.panX) * 0.1;
+            cameraControls.panY += (cameraControls.targetPanY - cameraControls.panY) * 0.1;
+            
+            const x = cameraControls.distance * Math.sin(cameraControls.rotationY) * Math.cos(cameraControls.rotationX);
+            const y = cameraControls.distance * Math.sin(cameraControls.rotationX);
+            const z = cameraControls.distance * Math.cos(cameraControls.rotationY) * Math.cos(cameraControls.rotationX);
+            
+            camera.position.set(
+                x + cameraControls.panX, 
+                y + cameraControls.panY - 1, 
+                z
+            );
+            camera.lookAt(cameraControls.panX, cameraControls.panY - 1, 0);
+        }
+
+        function changeView(viewType) {
+            cameraControls.targetPanX = 0;
+            cameraControls.targetPanY = 0;
+            
+            switch(viewType) {
+                case 'front':
+                    cameraControls.targetRotationY = 0;
+                    cameraControls.targetRotationX = 0;
+                    cameraControls.targetDistance = 10;
+                    break;
+                case 'side':
+                    cameraControls.targetRotationY = Math.PI / 2;
+                    cameraControls.targetRotationX = 0;
+                    cameraControls.targetDistance = 10;
+                    break;
+                case 'top':
+                    cameraControls.targetRotationY = 0;
+                    cameraControls.targetRotationX = Math.PI / 2 - 0.1;
+                    cameraControls.targetDistance = 12;
+                    break;
+                case 'iso':
+                    cameraControls.targetRotationY = Math.PI / 4;
+                    cameraControls.targetRotationX = Math.PI / 6;
+                    cameraControls.targetDistance = 10;
+                    break;
+            }
+        }
+
+        // ============================================
+        // ANIMACIÓN
+        // ============================================
+        function animate() {
+            requestAnimationFrame(animate);
+            updateCameraPosition();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // ============================================
+        // INICIALIZACIÓN FINAL
+        // ============================================
+        document.getElementById('waterSlider').addEventListener('input', updateDisplay);
+        initScene();
+        updateDisplay();
+    </script>
+</body>
+</html>
